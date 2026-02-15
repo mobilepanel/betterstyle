@@ -1,13 +1,3 @@
-// ==UserScript==
-// @name         Better Style Redux 
-// @version      4.1
-// @author       darkforce
-// @description  diepstyle but better
-// @match        https://*.diep.io/*
-// @grant        none
-// @run-at       document-idle
-// ==/UserScript==
-
 (function () {
   "use strict";
 
