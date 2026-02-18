@@ -3,7 +3,7 @@
   const jsColorPackage = `https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js`;
   
   const ICON_SAVE_DARK = "https://image2url.com/r2/default/images/1771393483164-dca147c3-1b53-436f-83bd-1595441d059a.png";
-  const ICON_SAVE_LIGHT = "https://image2url.com/r2/default/images/1771429950453-0821b7e1-1ffa-4942-8b1d-93d3cecbc393.png";
+  const ICON_SAVE_LIGHT = ICON_SAVE_DARK
   
   const ICON_IMPORT_DARK = "https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png";
   const ICON_IMPORT_LIGHT = "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png";
