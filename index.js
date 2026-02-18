@@ -1,6 +1,19 @@
 (function () {
   "use strict";
   const jsColorPackage = `https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js`;
+  
+  const ICON_SAVE_DARK = "https://image2url.com/r2/default/images/1771393483164-dca147c3-1b53-436f-83bd-1595441d059a.png";
+  const ICON_SAVE_LIGHT = "https://image2url.com/r2/default/images/1771429950453-0821b7e1-1ffa-4942-8b1d-93d3cecbc393.png";
+  
+  const ICON_IMPORT_DARK = "https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png";
+  const ICON_IMPORT_LIGHT = "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png";
+  
+  const ICON_EXPORT_DARK = "https://image2url.com/r2/default/images/1771393507955-9bd65498-c59d-47a7-b61d-eb0158c9f367.png";
+  const ICON_EXPORT_LIGHT = "https://image2url.com/r2/default/images/1771430075200-068bd3c2-d62a-4fa3-bf3e-4e955a3c7c57.png";
+
+  const ICON_MARKET_DARK = "https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png"; 
+  const ICON_MARKET_LIGHT = "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png";
+
   var localStorage;
   var nowSetting;
   var isLocal;
@@ -171,7 +184,7 @@
         { id: 14, name: "Maze Wall", color: "bbbbbb" },
         { id: 1, name: "Turret", color: "999999" },
         { id: 0, name: "Smasher", color: "4f4f4f" },
-        // -- //
+        
         { id: th++, name: "All Bars", color: "000000", cmd: "ren_bar_background_color" },
         { id: th++, name: "Outline", color: "555555", cmd: "ren_stroke_solid_color" },
         { id: 13, name: "Leader Board", color: "64ff8c" },
@@ -184,7 +197,7 @@
         { id: th++, name: "Minimap 2", color: "797979", cmd: "ren_minimap_border_color" },
         { id: th++, name: "Background 1", color: "CDCDCD", cmd: "ren_background_color" },
         { id: th++, name: "Background 2", color: "797979", cmd: "ren_border_color" },
-        // -- //
+        
         { id: netTH++, name: "UI Color1", color: "e69f6c", cmd: "ui_replace_colors" },
         { id: netTH++, name: "UI Color2", color: "ff73ff", cmd: "ui_replace_colors" },
         { id: netTH++, name: "UI Color3", color: "c980ff", cmd: "ui_replace_colors" },
@@ -312,8 +325,9 @@
     }
 
     function keyListen() {
-      var input = "";
       var panelOn = false;
+      var lastEscTime = 0;
+
       const performToggle = () => {
         panelOn = !panelOn;
         togglePanel(panelOn);
@@ -325,12 +339,16 @@
       document.addEventListener("keyup", function (evt) {
         var e = window.event || evt;
         var key = e.which || e.keyCode;
-        input += key;
-        if (input.indexOf("2727") >= 0) {
-          input = "";
-          performToggle();
+        
+        if (key === 27) {
+            const now = Date.now();
+            if (now - lastEscTime < 500) {
+                performToggle();
+                lastEscTime = 0; 
+            } else {
+                lastEscTime = now;
+            }
         }
-        if (input.length > 10) input = input.substring(input.length - 10);
       });
 
       let tapCount = 0;
@@ -463,6 +481,8 @@
             document.getElementById('styleSetting').classList.remove('dark-mode');
             if (toggle) toggle.checked = false;
           }
+          
+          updateIcons(nowSetting.uiMode === 'dark');
           updateOverwriteBtn();
         }
 
@@ -472,6 +492,8 @@
 
         function getThemeBody() {
           const allThemes = getCombinedThemes();
+          const isDark = nowSetting.uiMode === 'dark';
+          const iconSrc = isDark ? ICON_SAVE_DARK : ICON_SAVE_LIGHT;
 
           let themeListHTML = allThemes.map((t) => {
             const isSelected = diepStyle.currentThemeId === t.id;
@@ -495,7 +517,7 @@
                     <div class="section-title">Local Themes</div>
                     <div class="theme-controls">
                         <input type="text" id="newThemeName" placeholder="Theme Name">
-                        <button id="saveThemeBtn" title="Save as new theme"><img class="btn-icon" src="https://image2url.com/r2/default/images/1771393483164-dca147c3-1b53-436f-83bd-1595441d059a.png" alt="">Save New</button>
+                        <button id="saveThemeBtn" title="Save as new theme"><img class="btn-icon icon-save" src="${iconSrc}" alt="">Save New</button>
                         <button id="overwriteThemeBtn" title="Overwrite currently loaded theme" disabled>Overwrite</button>
                     </div>
                     <div class="theme-list" id="customThemeList">
@@ -561,6 +583,10 @@
           it += `</div>`;
           return it;
         }
+        
+        const isDark = nowSetting.uiMode === 'dark';
+        const importIcon = isDark ? ICON_IMPORT_DARK : ICON_IMPORT_LIGHT;
+        const exportIcon = isDark ? ICON_EXPORT_DARK : ICON_EXPORT_LIGHT;
 
         var allBody = `
             <div class="pluginBody">
@@ -578,8 +604,8 @@
         var footer = `
     <div class="footer">
         <div class="action-btns">
-            <button class="import action-btn"><img class="btn-icon" src="https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png" alt="">Import JSON</button>
-            <button class="export action-btn"><img class="btn-icon" src="https://image2url.com/r2/default/images/1771393507955-9bd65498-c59d-47a7-b61d-eb0158c9f367.png" alt="">Export JSON</button>
+            <button class="import action-btn"><img class="btn-icon icon-import" src="${importIcon}" alt="">Import JSON</button>
+            <button class="export action-btn"><img class="btn-icon icon-export" src="${exportIcon}" alt="">Export JSON</button>
             <button class="marketplace-btn action-btn" style="background:#768dfc; color:white; border:none;">Marketplace</button>
             <button class="lock-btn action-btn">Lock</button>
             <button class="reset-btn action-btn" style="background:#ff7979; color:white; border:none;">Reset</button>
@@ -666,15 +692,24 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
 
         staticListenerInit();
 
+        function updateIcons(isDark) {
+            document.querySelectorAll('.icon-save').forEach(img => img.src = isDark ? ICON_SAVE_DARK : ICON_SAVE_LIGHT);
+            document.querySelectorAll('.icon-import').forEach(img => img.src = isDark ? ICON_IMPORT_DARK : ICON_IMPORT_LIGHT);
+            document.querySelectorAll('.icon-export').forEach(img => img.src = isDark ? ICON_EXPORT_DARK : ICON_EXPORT_LIGHT);
+            document.querySelectorAll('.icon-market').forEach(img => img.src = isDark ? ICON_MARKET_DARK : ICON_MARKET_LIGHT);
+        }
+
         function staticListenerInit() {
           document.getElementById('darkModeToggle').addEventListener('change', function (e) {
-            if (e.target.checked) {
+            const isDark = e.target.checked;
+            if (isDark) {
               document.getElementById('styleSetting').classList.add('dark-mode');
               nowSetting.uiMode = 'dark';
             } else {
               document.getElementById('styleSetting').classList.remove('dark-mode');
               nowSetting.uiMode = 'light';
             }
+            updateIcons(isDark);
             localStorage.pluginSave();
           });
           document.querySelector('.marketplace-btn').addEventListener('click', function () {
@@ -891,6 +926,9 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                 } else {
                   imgHTML = `<div style="width:60px; height:40px; background:#eee; border-radius:4px; margin-right:10px; display:flex; align-items:center; justify-content:center; font-size:9px; color:#999;">No Preview</div>`
                 }
+                
+                const isDark = nowSetting.uiMode === 'dark';
+                const iconSrc = isDark ? ICON_SAVE_DARK : ICON_SAVE_LIGHT;
 
                 card.innerHTML = `
                           <div style="display:flex; flex:1; align-items:center;">
@@ -901,7 +939,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                               </div>
                           </div>
                           <button class="load-market-btn action-btn" style="background:var(--accent-color); color:white; border:none; margin-left:10px;">
-                             <img class="btn-icon" src="https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png" alt=""> Save to Local
+                             <img class="btn-icon icon-save" src="${iconSrc}" alt=""> Save to Local
                           </button>
                       `;
                 card.querySelector('.load-market-btn').addEventListener('click', () => {
