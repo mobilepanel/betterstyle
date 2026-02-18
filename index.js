@@ -1,17 +1,20 @@
 (function () {
   "use strict";
-
   const jsColorPackage = `https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js`;
   var localStorage;
   var nowSetting;
   var isLocal;
   var clone;
   var customThemes = [];
+
   const STORAGE_KEY = "betterstyle_v3_settings";
   const THEME_KEY = "betterstyle_Themes_v3_local";
+  const SELECTED_THEME_KEY = "betterstyle_selected_theme_id";
+  const MARKET_ENDPOINT = "https://actual-wasp-57164.upstash.io";
+  const MARKET_TOKEN = "Ad9MAAIncDI1MjJlMzFkNzVmMTk0YjBmYmE0YjMyNDdmMWJkMmNhOXAyNTcxNjQ";
+  const MARKET_KEY = "diep_marketplace_themes";
 
   jsInit();
-
   setTimeout(pluginInit, 2000);
 
   function jsInit() {
@@ -26,15 +29,22 @@
       return JSON.parse(JSON.stringify(obj));
     };
     window.diepStyle = {};
-    window.diepStyle.currentThemeId = null;
+
     localStorage = window.localStorage;
+
+    window.diepStyle.currentThemeId = localStorage.getItem(SELECTED_THEME_KEY) || null;
+
     if (location.href.indexOf("file://") >= 0) {
       isLocal = true;
     }
     var storedThemes = localStorage.getObject(THEME_KEY);
     if (storedThemes && Array.isArray(storedThemes)) {
-      customThemes = storedThemes.map(t => t.id ? t : { ...t, id: Date.now() + Math.random() });
+      customThemes = storedThemes.map(t => t.id ? t : { ...t, id: Date.now() + Math.random().toString() });
     }
+    const link = document.createElement('link');
+    link.href = "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&family=Oswald:wght@400;700&family=Protest+Riot&family=Roboto:wght@400;700&family=Ubuntu:wght@400;700&display=swap";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
   }
 
   function escapeHtml(text) {
@@ -47,6 +57,45 @@
       .replace(/'/g, "&#039;");
   };
 
+  function resizeImage(file, maxWidth, maxHeight, callback) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.src = url;
+
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+            if (width > maxWidth) {
+                height *= maxWidth / width;
+                width = maxWidth;
+            }
+        } else {
+            if (height > maxHeight) {
+                width *= maxHeight / height;
+                height = maxHeight;
+            }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+        callback(dataUrl);
+        URL.revokeObjectURL(url);
+    };
+
+    img.onerror = () => {
+        URL.revokeObjectURL(url);
+        console.error("Failed to load image for resizing");
+    };
+  }
+
   function pluginInit() {
     storageInit();
     keyListen();
@@ -54,6 +103,51 @@
     styleInit();
     diepStyle.onColor = onColor;
     diepStyle.storageInit = storageInit;
+
+    (function initFontHook() {
+        const domStyle = document.createElement('style');
+        domStyle.id = "diep-font-style-hook";
+        document.head.appendChild(domStyle);
+
+        function updateDOMFont(fontName) {
+            if (!fontName) return;
+            domStyle.innerHTML = `
+                body, * { font-family: '${fontName}', Ubuntu, sans-serif !important; }
+            `;
+        }
+
+        if (nowSetting && nowSetting.font) updateDOMFont(nowSetting.font);
+        const originalFn = diepStyle.command.fn;
+        diepStyle.command.fn = function(cmd, value) {
+             originalFn(cmd, value);
+             if(cmd === 'custom_font') {
+                 updateDOMFont(value);
+             }
+        };
+
+        try {
+            const fontDesc = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "font");
+            if (!fontDesc) return;
+
+            const originalSetter = fontDesc.set;
+            const originalGetter = fontDesc.get;
+
+            Object.defineProperty(CanvasRenderingContext2D.prototype, "font", {
+                set(value) {
+                    if (nowSetting && nowSetting.font) {
+                        value = value.replace(/Ubuntu|sans-serif/gi, nowSetting.font);
+                    }
+                    originalSetter.call(this, value);
+                },
+                get() {
+                    return originalGetter.call(this);
+                },
+                configurable: true
+            });
+        } catch (e) {
+            console.error("Better Style: Font hook failed", e);
+        }
+    })();
 
     function storageInit(cmd) {
       var th = 50,
@@ -140,6 +234,7 @@
         { name: "Show FPS", value: false, cmd: "fps" },
         { name: "Show Health", value: false, cmd: "raw_health_values" },
         { name: "Hide Name", value: false, cmd: "names", reverse: true },
+        { name: "Font Face", value: "Ubuntu", cmd: "custom_font", type: "select" }
       ];
       (function checkHasStorage() {
         var _localStorage = localStorage.getObject(STORAGE_KEY);
@@ -170,6 +265,7 @@
             nowSetting.colors.splice(th, 0, elem);
           }
         });
+        if(!nowSetting.font) nowSetting.font = "Ubuntu";
       })();
       (function command() {
         diepStyle.command = {};
@@ -182,22 +278,29 @@
             if (elem.cmd == cmd) elem.value = value;
             return elem;
           });
+          if (cmd === "custom_font") {
+              nowSetting.font = value;
+              return;
+          }
           if (diepStyle.command[cmd].reverse) value = !value;
-
           if (window.input) {
             window.input.set_convar("ren_" + cmd, value);
           }
         };
       })();
+
       function getBlankSetting() {
         return {
-          version: 3.0,
+          version: 3.1,
           lock: false,
           colors: clone(colors),
           renders: clone(renders),
-          uiMode: 'light'
+          uiMode: 'light',
+          font: 'Ubuntu'
         };
       }
+
+      diepStyle.getBlankSetting = getBlankSetting;
 
       Storage.prototype.pluginSave = function () {
         var _storageObj = {
@@ -267,7 +370,7 @@
         diepStyle.resetRender = resetRender;
         var title = `
             <div class="header-container">
-                <div class="title">Better Style <small>v4.1</small></div>
+                <div class="title">Better Style <small>v4.4</small></div>
                 <div class="toggle-container">
                    <label class="switch">
                       <input type="checkbox" id="darkModeToggle">
@@ -284,11 +387,21 @@
         window.updateOverwriteBtn = function() {
            const btn = document.getElementById('overwriteThemeBtn');
            if(btn) {
-                btn.disabled = !diepStyle.currentThemeId || !customThemes.find(t => t.id === diepStyle.currentThemeId);
+                const theme = getCombinedThemes().find(t => t.id === diepStyle.currentThemeId);
+                const isReadOnly = theme && theme.readOnly;
+                btn.disabled = !diepStyle.currentThemeId || !theme || isReadOnly;
            }
         }
+        function getCombinedThemes() {
+             const defaultObj = {
+                 id: "default_theme_readonly",
+                 name: "Default",
+                 data: diepStyle.exportJSON("object", diepStyle.getBlankSetting()),
+                 readOnly: true
+             };
+             return [defaultObj, ...customThemes];
+        }
 
-        // Custom Modal Logic (Alert/Confirm)
         window.customAlert = function(msg) {
              const m = document.getElementById('ds-msg-modal');
              const t = document.getElementById('ds-msg-text');
@@ -358,67 +471,79 @@
         var bodyColor = getColorBody();
 
         function getThemeBody() {
-          let themeListHTML = customThemes.map((t) => {
+          const allThemes = getCombinedThemes();
+
+          let themeListHTML = allThemes.map((t) => {
+            const isSelected = diepStyle.currentThemeId === t.id;
+            const activeClass = isSelected ? "selected-theme" : "";
+            const deleteBtn = t.readOnly
+                ? `<button class="delete-theme-btn" disabled style="opacity:0.3; cursor:default;">×</button>`
+                : `<button class="delete-theme-btn" data-id="${t.id}">×</button>`;
+
             return `
-                <div class="theme-card" data-id="${t.id}">
+                <div class="theme-card ${activeClass}" data-id="${t.id}">
                     <div class="theme-name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</div>
                      <div class="theme-actions">
-                        <button class="load-theme-btn" data-id="${t.id}">Load</button>
-                        <button class="delete-theme-btn" data-id="${t.id}">×</button>
+                        <button class="load-theme-btn" data-id="${t.id}" ${isSelected ? 'disabled' : ''}>${isSelected ? 'Active' : 'Select'}</button>
+                        ${deleteBtn}
                     </div>
                 </div>`;
           }).join('');
+
           var html = `
                 <div class="themeBody">
                     <div class="section-title">Local Themes</div>
                     <div class="theme-controls">
                         <input type="text" id="newThemeName" placeholder="Theme Name">
-                        <button id="saveThemeBtn" title="Save as new theme">Save New</button>
+                        <button id="saveThemeBtn" title="Save as new theme"><img class="btn-icon" src="https://image2url.com/r2/default/images/1771393483164-dca147c3-1b53-436f-83bd-1595441d059a.png" alt="">Save New</button>
                         <button id="overwriteThemeBtn" title="Overwrite currently loaded theme" disabled>Overwrite</button>
                     </div>
                     <div class="theme-list" id="customThemeList">
-                        ${themeListHTML || '<div class="no-themes">No local themes saved.</div>'}
+                        ${themeListHTML || '<div class="no-themes">No themes available.</div>'}
                     </div>
                 </div>
             `;
           return html;
         }
-
         function getRenderBody() {
           var renders = nowSetting.renders;
-          var th = -1;
-
-          const rangeRow = (name, cmd, val, max, unit = '') => {
-            return `<div class="row render">
-                <div class="cell label">${name}</div>
-                <div class="cell value-display"><span class="${cmd}_value">${val}</span>${unit}</div>
-                <div class="cell input-area">
-                    <input type="range" name="${cmd}" value="${val * 100}" max="${max}">
-                </div>
-             </div>`;
-          };
-          const checkRow = (name, cmd, val) => {
-            return `<div class="row render">
-                <div class="cell label">${name}</div>
-                <div class="cell input-area check-area">
-                   <label class="switch">
-                      <input type="checkbox" name="${cmd}" ${val ? "checked" : ""}>
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-             </div>`;
-          };
-
           var html = ``;
-          html += rangeRow(renders[++th].name, "grid_base_alpha", renders[th].value, 200);
-          html += rangeRow(renders[++th].name, "stroke_soft_color_intensity", renders[th].value, 100);
-          html += checkRow(renders[++th].name, "stroke_soft_color", renders[th].value);
-          html += rangeRow(renders[++th].name, "border_color_alpha", renders[th].value, 100);
-          html += rangeRow(renders[++th].name, "ui_scale", renders[th].value, 200);
-          html += checkRow(renders[++th].name, "ui", renders[th].value);
-          html += checkRow(renders[++th].name, "fps", renders[th].value);
-          html += checkRow(renders[++th].name, "raw_health_values", renders[th].value);
-          html += checkRow(renders[++th].name, "names", renders[th].value);
+
+          renders.forEach((r) => {
+              if (r.type === 'select' && r.cmd === 'custom_font') {
+                  const fonts = ["Ubuntu", "Protest Riot", "Roboto", "Open Sans", "Montserrat", "Oswald"];
+                  let options = fonts.map(f => `<option value="${f}" ${r.value === f ? 'selected' : ''}>${f}</option>`).join('');
+                  html += `<div class="row render">
+                    <div class="cell label">Font Face</div>
+                    <div class="cell input-area">
+                        <select name="${r.cmd}" class="font-select">
+                            ${options}
+                        </select>
+                    </div>
+                  </div>`;
+              } else if (r.cmd.includes('alpha') || r.cmd.includes('intensity') || r.cmd.includes('scale')) {
+                   let max = r.cmd.includes('alpha') || r.cmd === 'ui_scale' ? 200 : 100;
+                   if (r.cmd === 'stroke_soft_color_intensity') max = 100;
+
+                   html += `<div class="row render">
+                    <div class="cell label">${r.name}</div>
+                    <div class="cell value-display"><span class="${r.cmd}_value">${r.value}</span></div>
+                    <div class="cell input-area">
+                        <input type="range" name="${r.cmd}" value="${r.value * 100}" max="${max}">
+                    </div>
+                   </div>`;
+              } else {
+                  html += `<div class="row render">
+                    <div class="cell label">${r.name}</div>
+                    <div class="cell input-area check-area">
+                       <label class="switch">
+                          <input type="checkbox" name="${r.cmd}" ${r.value ? "checked" : ""}>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                 </div>`;
+              }
+          });
           return html;
         }
 
@@ -453,8 +578,8 @@
         var footer = `
     <div class="footer">
         <div class="action-btns">
-            <button class="import action-btn">Import JSON</button>
-            <button class="export action-btn">Export JSON</button>
+            <button class="import action-btn"><img class="btn-icon" src="https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png" alt="">Import JSON</button>
+            <button class="export action-btn"><img class="btn-icon" src="https://image2url.com/r2/default/images/1771393507955-9bd65498-c59d-47a7-b61d-eb0158c9f367.png" alt="">Export JSON</button>
             <button class="marketplace-btn action-btn" style="background:#768dfc; color:white; border:none;">Marketplace</button>
             <button class="lock-btn action-btn">Lock</button>
             <button class="reset-btn action-btn" style="background:#ff7979; color:white; border:none;">Reset</button>
@@ -493,7 +618,7 @@
     <div id="ds-market-modal" class="ds-modal hide">
         <div class="ds-modal-content" style="max-width: 700px; height: 600px; display:flex; flex-direction:column;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                 <h3 style="margin-top:0;">Theme Marketplace (Upstash)</h3>
+                 <h3 style="margin-top:0;">Theme Marketplace</h3>
                  <span class="ds-close-market" style="font-size:28px; cursor:pointer;">&times;</span>
             </div>
             <div style="display:flex; gap:10px; margin-bottom:10px;">
@@ -520,7 +645,7 @@
                 <input type="text" id="publishName" placeholder="My Cool Theme">
             </div>
             <div class="form-group">
-                 <label>Preview Image (Max 250KB):</label>
+                 <label>Preview Image (Canvas Optimized):</label>
                  <input type="file" id="publishImageInput" accept="image/png, image/jpeg">
                  <div id="imagePreviewContainer" style="margin-top:5px; border:1px solid #ccc; min-height:50px; display:flex; align-items:center; justify-content:center; background:#eee;">
                      <span style="color:#888;">No image selected</span>
@@ -534,10 +659,6 @@
     </div>
 `;
 
-        const UPSTASH_URL = "https://actual-wasp-57164.upstash.io";
-        const UPSTASH_TOKEN = "Ad9MAAIncDI1MjJlMzFkNzVmMTk0YjBmYmE0YjMyNDdmMWJkMmNhOXAyNTcxNjQ";
-        const MARKET_KEY = "diep_marketplace_themes";
-
         var temp = `<div id="styleSetting">
 ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} ${msgModalHTML}`;
         document.body.insertAdjacentHTML("beforeend", temp);
@@ -546,7 +667,6 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
         staticListenerInit();
 
         function staticListenerInit() {
-          // Dark Mode
           document.getElementById('darkModeToggle').addEventListener('change', function (e) {
             if (e.target.checked) {
               document.getElementById('styleSetting').classList.add('dark-mode');
@@ -557,8 +677,6 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             }
             localStorage.pluginSave();
           });
-
-          // Marketplace Buttons
           document.querySelector('.marketplace-btn').addEventListener('click', function () {
             document.getElementById('ds-market-modal').classList.remove('hide');
           });
@@ -578,29 +696,23 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             document.getElementById('ds-publish-modal').classList.add('hide');
           });
 
-          // Image preview handling
           const fileInput = document.getElementById('publishImageInput');
           const previewImg = document.getElementById('imagePreviewImg');
           const previewPlaceholder = document.getElementById('imagePreviewContainer').querySelector('span');
           let currentBase64Image = null;
+
           fileInput.addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (!file) return;
 
-            if (file.size > 256000) { // 250KB limit roughly
-              customAlert("Image too large. Please choose an image under 250KB.");
-              fileInput.value = '';
-              return;
-            }
+            const tempUrl = URL.createObjectURL(file);
+            previewImg.src = tempUrl;
+            previewImg.style.display = 'block';
+            previewPlaceholder.style.display = 'none';
 
-            const reader = new FileReader();
-            reader.onloadend = function () {
-              currentBase64Image = reader.result;
-              previewImg.src = currentBase64Image;
-              previewImg.style.display = 'block';
-              previewPlaceholder.style.display = 'none';
-            }
-            reader.readAsDataURL(file);
+            resizeImage(file, 200, 150, (smallDataUrl) => {
+                 currentBase64Image = smallDataUrl;
+            });
           });
 
           document.getElementById('confirmPublishBtn').addEventListener('click', function () {
@@ -611,7 +723,6 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             publishTheme(themeName, author, currentBase64Image);
           });
 
-           // Import/Export Modal Logic
           const modal = document.getElementById("ds-modal");
           const modalText = document.getElementById("ds-modal-text");
           const modalTitle = document.getElementById("ds-modal-title");
@@ -632,7 +743,10 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             importBtn.onclick = () => {
                 diepStyle.importJSON(modalText.value);
                 modal.classList.add("hide");
+
                 diepStyle.currentThemeId = null;
+                localStorage.removeItem(SELECTED_THEME_KEY);
+
                 refreshThemeListUI();
             };
           });
@@ -650,12 +764,10 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               setTimeout(() => copyBtn.innerText = "Copy to Clipboard", 1500);
             };
           });
-          // Lock
           document.querySelector(".lock-btn").addEventListener("click", function () {
             nowSetting.lock = !nowSetting.lock;
             updateLockState();
           });
-          // Reset
           const resetBtn = document.querySelector(".reset-btn");
           resetBtn.addEventListener("click", function (e) {
             if (e.target.innerHTML != "Confirm Reset") {
@@ -664,38 +776,35 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               diepStyle.storageInit("reset");
               diepStyle.resetColor();
               diepStyle.resetRender("reset");
-              diepStyle.currentThemeId = null;
+              diepStyle.currentThemeId = "default_theme_readonly";
+              localStorage.setItem(SELECTED_THEME_KEY, diepStyle.currentThemeId);
               refreshThemeListUI();
               e.target.innerHTML = "Reset";
             }
           });
           resetBtn.addEventListener("mouseleave", e => e.target.innerHTML = "Reset");
-
-          // IMPORTANT: Bind Theme Listeners initially
           bindThemeActions();
 
           loadMarketplace();
         }
-
-        // --- NEW: Function to bind listeners to the Theme UI whenever it's redrawn ---
         function bindThemeActions() {
           const saveBtn = document.getElementById('saveThemeBtn');
           if(saveBtn) {
-              // Remove old listener if any (implicit via new DOM) and add new one
               saveBtn.onclick = function () {
                 var name = document.getElementById('newThemeName').value;
                 if (!name) { customAlert("Please enter a name for the new theme."); return; }
                 var jsonObj = diepStyle.exportJSON("object");
                 saveLocalTheme(name, jsonObj);
-                diepStyle.currentThemeId = customThemes[customThemes.length - 1].id;
-                updateOverwriteBtn();
               };
           }
-
           const overwriteBtn = document.getElementById('overwriteThemeBtn');
           if(overwriteBtn) {
               overwriteBtn.onclick = function () {
                 if (!diepStyle.currentThemeId) return;
+                if(diepStyle.currentThemeId === 'default_theme_readonly') {
+                    customAlert("Cannot overwrite the Default theme.");
+                    return;
+                }
                 const currentTheme = customThemes.find(t => t.id === diepStyle.currentThemeId);
                 if (currentTheme) {
                      customConfirm(`Overwrite theme "${currentTheme.name}" with current settings?`, function() {
@@ -705,23 +814,23 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                 }
               };
           }
-
           const themeList = document.querySelector('.theme-list');
           if(themeList) {
               themeList.onclick = function (e) {
-                // Load
                 if (e.target.classList.contains('load-theme-btn')) {
                   var id = e.target.getAttribute('data-id');
-                  var theme = customThemes.find(t => t.id == id);
+                  var theme = getCombinedThemes().find(t => t.id == id);
                   if (theme) {
                     diepStyle.importJSON(theme.data);
                     diepStyle.currentThemeId = id;
+                    localStorage.setItem(SELECTED_THEME_KEY, id);
                     refreshThemeListUI();
                   }
                 }
-                // Delete
                 if (e.target.classList.contains('delete-theme-btn')) {
                   var id = e.target.getAttribute('data-id');
+                  if (id === "default_theme_readonly") return;
+
                   var idx = customThemes.findIndex(t => t.id == id);
                   if (idx !== -1) {
                       customConfirm("Are you sure you want to delete this theme?", function() {
@@ -729,6 +838,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                             localStorage.setObject(THEME_KEY, customThemes);
                             if (diepStyle.currentThemeId == id) {
                               diepStyle.currentThemeId = null;
+                              localStorage.removeItem(SELECTED_THEME_KEY);
                             }
                             refreshThemeListUI();
                       });
@@ -742,10 +852,10 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
           const list = document.getElementById('market-list');
           list.innerHTML = "Loading Themes from Marketplace...";
 
-          fetch(`${UPSTASH_URL}/get/${MARKET_KEY}`, {
+          fetch(`${MARKET_ENDPOINT}/get/${MARKET_KEY}`, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${UPSTASH_TOKEN}`
+              'Authorization': `Bearer ${MARKET_TOKEN}`
             }
           })
             .then(response => response.json())
@@ -775,8 +885,6 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                 card.style.padding = "10px";
                 card.style.marginBottom = "8px";
                 card.style.background = "var(--modal-bg)";
-
-                // Image handling
                 let imgHTML = '';
                 if (t.previewImage) {
                   imgHTML = `<img src="${t.previewImage}" style="width:60px; height:40px; object-fit:cover; border-radius:4px; border:1px solid var(--border-color); margin-right:10px;">`;
@@ -792,9 +900,10 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                                   <div style="font-size:0.85em; opacity:0.7;">by ${escapeHtml(t.author)}</div>
                               </div>
                           </div>
-                          <button class="load-market-btn action-btn" style="background:var(--accent-color); color:white; border:none; margin-left:10px;">Save to Local</button>
+                          <button class="load-market-btn action-btn" style="background:var(--accent-color); color:white; border:none; margin-left:10px;">
+                             <img class="btn-icon" src="https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png" alt=""> Save to Local
+                          </button>
                       `;
-                // Import listener
                 card.querySelector('.load-market-btn').addEventListener('click', () => {
                   const saveName = prompt("Enter a name to save this theme locally:", t.name);
                   if (saveName) {
@@ -815,11 +924,15 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
         function publishTheme(name, author, base64Img) {
           const btn = document.getElementById('confirmPublishBtn');
           const originalText = btn.innerText;
+
           btn.innerText = "Publishing...";
           btn.disabled = true;
-          fetch(`${UPSTASH_URL}/get/${MARKET_KEY}`, {
+          btn.style.opacity = "0.5";
+          btn.style.cursor = "not-allowed";
+
+          fetch(`${MARKET_ENDPOINT}/get/${MARKET_KEY}`, {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${UPSTASH_TOKEN}` }
+            headers: { 'Authorization': `Bearer ${MARKET_TOKEN}` }
           })
             .then(res => res.json())
             .then(data => {
@@ -838,10 +951,10 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               };
               currentThemes.push(newTheme);
 
-              return fetch(`${UPSTASH_URL}`, {
+              return fetch(`${MARKET_ENDPOINT}`, {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${UPSTASH_TOKEN}`
+                  'Authorization': `Bearer ${MARKET_TOKEN}`
                 },
                 body: JSON.stringify(["SET", MARKET_KEY, JSON.stringify(currentThemes)])
               });
@@ -852,7 +965,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               customAlert("Theme published successfully!");
               document.getElementById('ds-publish-modal').classList.add('hide');
               document.getElementById('ds-market-modal').classList.remove('hide');
-              loadMarketplace(); // Refresh list
+              loadMarketplace();
             })
             .catch(err => {
               customAlert("Failed to publish: " + err.message);
@@ -860,17 +973,20 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             .finally(() => {
               btn.innerText = originalText;
               btn.disabled = false;
+              btn.style.opacity = "1";
+              btn.style.cursor = "pointer";
             });
         }
         function refreshThemeListUI() {
           var list = document.querySelector('.themeBody');
           if(!list) return;
           list.outerHTML = getThemeBody();
-          // Call bindThemeActions again because the HTML was replaced
           bindThemeActions();
           updateOverwriteBtn();
         }
         function saveLocalTheme(name, themeDataObj, existingId = null) {
+          let targetId = existingId;
+
           if (existingId) {
             const idx = customThemes.findIndex(t => t.id == existingId);
             if (idx !== -1) {
@@ -878,16 +994,20 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               customThemes[idx].data = themeDataObj;
             }
           } else {
+            targetId = Date.now().toString();
             customThemes.push({
-              id: Date.now().toString(),
+              id: targetId,
               name: name,
               data: themeDataObj
             });
           }
           localStorage.setObject(THEME_KEY, customThemes);
+
+          diepStyle.currentThemeId = targetId;
+          localStorage.setItem(SELECTED_THEME_KEY, targetId);
+
           refreshThemeListUI();
         }
-
         function updateLockState() {
           var lockBtn = document.querySelector(".lock-btn");
           var resetBtn = document.querySelector(".reset-btn");
@@ -931,6 +1051,13 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               const el = document.querySelector(`input[name=${name}]`);
               if (el) el.addEventListener("change", e => diepStyle.command.fn(name, e.target.checked));
             });
+
+            const fontSel = document.querySelector('select[name="custom_font"]');
+            if (fontSel) {
+                fontSel.addEventListener("change", function(e) {
+                    diepStyle.command.fn("custom_font", e.target.value);
+                });
+            }
         }
       }
 
@@ -946,21 +1073,41 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
         });
       }
 
-      function exportJSON(mode = "string") {
+      function exportJSON(mode = "string", sourceSettings = null) {
+        var settingToUse = sourceSettings || nowSetting;
         var array = [];
-        nowSetting.colors.forEach(function (elem) {
+        settingToUse.colors.forEach(function (elem) {
           if (elem.id && elem.id < 50)
             array.push({ id: elem.id, value: elem.color, });
           if (elem.id && elem.id >= 50 && elem.id < 100)
             array.push({ cmd: elem.cmd, value: elem.color, });
         });
-        array.push({
-          cmd: "ui_replace_colors",
-          value: diepStyle.uiColorMap("array"),
+
+        if(sourceSettings) {
+             var uiTH = settingToUse.colors.findIndex(elem => elem.name == "UI Color1");
+             var arr = [];
+             for (var i = 0; i < 8; i++) {
+                 arr.push(settingToUse.colors[uiTH + i].color);
+             }
+             array.push({
+                cmd: "ui_replace_colors",
+                value: arr,
+             });
+        } else {
+             array.push({
+                cmd: "ui_replace_colors",
+                value: diepStyle.uiColorMap("array"),
+             });
+        }
+
+        settingToUse.renders.forEach(function (elem) {
+          array.push({ cmd: elem.cmd, value: elem.value });
         });
-        nowSetting.renders.forEach(function (elem) {
-          array.push({ cmd: elem.cmd, value: elem.value, });
-        });
+
+        if (!array.find(x => x.cmd === 'custom_font')) {
+            array.push({ cmd: 'custom_font', value: settingToUse.font });
+        }
+
         if (mode === "object") return array;
         return JSON.stringify(array);
       }
@@ -992,6 +1139,11 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             for (var i = 0; i < 8; i++) {
               nowSetting.colors[uiTH + i].color = elem.value[i];
             }
+          }
+          if (elem.cmd === "custom_font") {
+              nowSetting.font = elem.value;
+              var rInd = nowSetting.renders.findIndex(r => r.cmd === 'custom_font');
+              if(rInd >= 0) nowSetting.renders[rInd].value = elem.value;
           }
         });
         diepStyle.resetColor();
@@ -1069,7 +1221,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
         }
         .check-area { justify-content: flex-end;
         }
-
+        .font-select { width: 100%; padding: 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--btn-bg); color: var(--text-color); }
         input[type=range] { -webkit-appearance: none; width: 100%; height: 12px; border-radius: 6px; background: var(--range-track);
         outline: none; background-image: linear-gradient(var(--accent-color), var(--accent-color)); background-repeat: no-repeat; background-size: 0% 100%; cursor: pointer;
         }
@@ -1078,7 +1230,6 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
         }
         input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1);
         }
-
         hr { border: 0; border-top: 1px solid var(--border-color); margin: 10px 0;
         }
         .section-title { font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-size: 0.85rem; color: var(--accent-color);
@@ -1089,47 +1240,45 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
         padding: 4px; border-radius: 4px; background: rgba(0,0,0,0.05); }
         input.jscolor { width: 60px; border: none;
         text-align: center; border-radius: 3px; cursor: pointer; }
-
-        /* Themes */
         .theme-controls { display: flex;
         gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
         #newThemeName { flex: 2; padding: 5px;
         border: 1px solid var(--border-color); border-radius: 4px; background: var(--modal-bg); color: var(--text-color); min-width: 120px;
         }
         #saveThemeBtn, #overwriteThemeBtn { flex: 1; padding: 5px; cursor: pointer; background: var(--accent-color);
-        color: white; border: none; border-radius: 4px; white-space: nowrap; }
+        color: white; border: none; border-radius: 4px; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px; }
         #overwriteThemeBtn { background: #f39c12;
         }
         #overwriteThemeBtn:disabled { background: var(--btn-bg); color: #999; cursor: not-allowed;
         }
-
         .theme-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px;
         padding: 5px; }
         .theme-card { display: flex; justify-content: space-between; align-items: center; padding: 6px;
-        border-bottom: 1px solid var(--border-color); }
+        border-bottom: 1px solid var(--border-color); transition: all 0.2s; }
+        .theme-card.selected-theme { border-left: 4px solid #00e16e; background: rgba(0, 225, 110, 0.1); }
         .theme-card.market-card:hover { background: rgba(0,0,0,0.05) !important;
         }
         .theme-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;
         }
         .theme-actions button { font-size: 0.75rem; margin-left: 4px; cursor: pointer; border-radius: 3px;
         border: 1px solid var(--border-color); padding: 2px 6px; background: var(--btn-bg); color: var(--text-color);}
+        .load-theme-btn:disabled { opacity: 0.6; cursor: default; }
         .delete-theme-btn { color: white !important;
         background: #ff4757 !important; border: none !important; }
         .delete-theme-btn:hover { background: #e84118 !important;
         }
-
-        /* Footer & Buttons */
+        .delete-theme-btn:disabled { background: #ccc !important; }
         .footer { margin-top: 10px;
         padding-top: 10px; border-top: 1px solid var(--border-color); }
         .action-btns { display: flex; justify-content: space-between;
         gap: 5px; flex-wrap: wrap; }
         .action-btn { flex: 1 1 30%; padding: 8px;
         cursor: pointer; background: var(--btn-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; white-space: nowrap;
+        display: flex; align-items: center; justify-content: center; gap: 4px;
         }
         .reset-btn:hover { background: #ff7979 !important;
         }
-
-        /* Switch & Modal (Global) */
+        .btn-icon { width: 14px; height: 14px; object-fit: contain; }
         .switch { position: relative;
         display: inline-block; width: 34px; height: 18px; margin-right: 5px; }
         .switch input { opacity: 0;
@@ -1145,7 +1294,6 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
         }
         .toggle-container { display: flex; align-items: center; font-size: 0.8rem;
         }
-
         .hide { display: none !important;
         }
         .ds-modal { position: fixed; z-index: 10000; left: 0; top: 0; width: 100%;
