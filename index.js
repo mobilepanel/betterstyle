@@ -245,6 +245,7 @@
         { name: "UI Scale", value: 1, cmd: "ui_scale" },
         { name: "Clear UI", value: false, cmd: "ui", reverse: true },
         { name: "Show FPS", value: false, cmd: "fps" },
+        { name: "Show Ping", value: false, cmd: "latency" },
         { name: "Show Health", value: false, cmd: "raw_health_values" },
         { name: "Hide Name", value: false, cmd: "names", reverse: true },
         { name: "Font Face", value: "Ubuntu", cmd: "custom_font", type: "select" }
