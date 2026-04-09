@@ -6,7 +6,7 @@
     BRAND_ICON: "https://image2url.com/r2/default/images/1771394161131-f1ca2c6e-ead4-49d7-b884-6dfe8dd2a801.png",
     ICONS: {
       SAVE_DARK: "https://image2url.com/r2/default/images/1771393483164-dca147c3-1b53-436f-83bd-1595441d059a.png",
-      SAVE_LIGHT: "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png",
+      SAVE_LIGHT: "https://image2url.com/r2/default/images/1771393483164-dca147c3-1b53-436f-83bd-1595441d059a.png",
       IMPORT_DARK: "https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png",
       IMPORT_LIGHT: "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png",
       EXPORT_DARK: "https://image2url.com/r2/default/images/1771393507955-9bd65498-c59d-47a7-b61d-eb0158c9f367.png",
