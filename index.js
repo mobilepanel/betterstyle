@@ -1,31 +1,41 @@
 (function () {
   "use strict";
-  const jsColorPackage = `https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js`;
-  
-  const ICON_SAVE_DARK = "https://image2url.com/r2/default/images/1771393483164-dca147c3-1b53-436f-83bd-1595441d059a.png";
-  const ICON_SAVE_LIGHT = ICON_SAVE_DARK
-  
-  const ICON_IMPORT_DARK = "https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png";
-  const ICON_IMPORT_LIGHT = "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png";
-  
-  const ICON_EXPORT_DARK = "https://image2url.com/r2/default/images/1771393507955-9bd65498-c59d-47a7-b61d-eb0158c9f367.png";
-  const ICON_EXPORT_LIGHT = "https://image2url.com/r2/default/images/1771430075200-068bd3c2-d62a-4fa3-bf3e-4e955a3c7c57.png";
 
-  const ICON_MARKET_DARK = "https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png"; 
-  const ICON_MARKET_LIGHT = "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png";
+  const CONFIG = {
+    JS_COLOR_URL: "https://cdnjs.cloudflare.com/ajax/libs/jscolor/2.0.4/jscolor.min.js",
+    BRAND_ICON: "https://image2url.com/r2/default/images/1771394161131-f1ca2c6e-ead4-49d7-b884-6dfe8dd2a801.png",
+    ICONS: {
+      SAVE_DARK: "https://image2url.com/r2/default/images/1771393483164-dca147c3-1b53-436f-83bd-1595441d059a.png",
+      SAVE_LIGHT: "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png",
+      IMPORT_DARK: "https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png",
+      IMPORT_LIGHT: "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png",
+      EXPORT_DARK: "https://image2url.com/r2/default/images/1771393507955-9bd65498-c59d-47a7-b61d-eb0158c9f367.png",
+      EXPORT_LIGHT: "https://image2url.com/r2/default/images/1771430075200-068bd3c2-d62a-4fa3-bf3e-4e955a3c7c57.png",
+      MARKET_DARK: "https://image2url.com/r2/default/images/1771393536379-02a075e0-8347-482a-972b-5ef12d2f01d3.png",
+      MARKET_LIGHT: "https://image2url.com/r2/default/images/1771430038800-a515edfa-bded-4434-a759-5e7d81577ee4.png"
+    },
+    FONTS: {
+      LIST: ["Ubuntu", "Protest Riot", "Inter", "Poppins", "Fira Code", "Playfair Display", "Caveat", "Comic Neue", "Cinzel"],
+      URL: "https://fonts.googleapis.com/css2?family=Caveat&family=Cinzel&family=Protest+Riot&family=Comic+Neue&family=Fira+Code&family=Inter:wght@400;700&family=Playfair+Display&family=Poppins:wght@400;700&family=Ubuntu:wght@400;700&display=swap"
+    },
+    KEYS: {
+      STORAGE: "betterstyle_v3_settings",
+      THEME: "betterstyle_Themes_v3_local",
+      SELECTED_THEME: "betterstyle_selected_theme_id",
+      MARKET: "diep_marketplace_themes"
+    },
+    MARKET_API: {
+      ENDPOINT: "https://actual-wasp-57164.upstash.io",
+      TOKEN: "Ad9MAAIncDI1MjJlMzFkNzVmMTk0YjBmYmE0YjMyNDdmMWJkMmNhOXAyNTcxNjQ"
+    }
+  };
 
-  var localStorage;
-  var nowSetting;
-  var isLocal;
-  var clone;
-  var customThemes = [];
-
-  const STORAGE_KEY = "betterstyle_v3_settings";
-  const THEME_KEY = "betterstyle_Themes_v3_local";
-  const SELECTED_THEME_KEY = "betterstyle_selected_theme_id";
-  const MARKET_ENDPOINT = "https://actual-wasp-57164.upstash.io";
-  const MARKET_TOKEN = "Ad9MAAIncDI1MjJlMzFkNzVmMTk0YjBmYmE0YjMyNDdmMWJkMmNhOXAyNTcxNjQ";
-  const MARKET_KEY = "diep_marketplace_themes";
+  let localStorage;
+  let nowSetting;
+  let isLocal;
+  let clone;
+  let customThemes = [];
+  let panelOn = false;
 
   jsInit();
   setTimeout(pluginInit, 2000);
@@ -35,7 +45,7 @@
       this.setItem(key, JSON.stringify(value));
     };
     Storage.prototype.getObject = function (key) {
-      var value = this.getItem(key);
+      const value = this.getItem(key);
       return value && JSON.parse(value);
     };
     clone = function (obj) {
@@ -44,19 +54,17 @@
     window.diepStyle = {};
 
     localStorage = window.localStorage;
-
-    window.diepStyle.currentThemeId = localStorage.getItem(SELECTED_THEME_KEY) || null;
+    window.diepStyle.currentThemeId = localStorage.getItem(CONFIG.KEYS.SELECTED_THEME) || null;
 
     if (location.href.indexOf("file://") >= 0) {
       isLocal = true;
     }
-    var storedThemes = localStorage.getObject(THEME_KEY);
+    const storedThemes = localStorage.getObject(CONFIG.KEYS.THEME);
     if (storedThemes && Array.isArray(storedThemes)) {
       customThemes = storedThemes.map(t => t.id ? t : { ...t, id: Date.now() + Math.random().toString() });
     }
     const link = document.createElement('link');
-    // FIXED: Google Fonts API URL now properly specifies weights for all fonts, restoring Ubuntu bold (700).
-    link.href = "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Open+Sans:wght@400;700&family=Oswald:wght@400;700&family=Protest+Riot:wght@400&family=Roboto:wght@400;700&family=Ubuntu:wght@400;700&display=swap";
+    link.href = CONFIG.FONTS.URL;
     link.rel = "stylesheet";
     document.head.appendChild(link);
   }
@@ -69,7 +77,7 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
-  };
+  }
 
   function resizeImage(file, maxWidth, maxHeight, callback) {
     const img = new Image();
@@ -77,36 +85,36 @@
     img.src = url;
 
     img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
 
-        if (width > height) {
-            if (width > maxWidth) {
-                height *= maxWidth / width;
-                width = maxWidth;
-            }
-        } else {
-            if (height > maxHeight) {
-                width *= maxHeight / height;
-                height = maxHeight;
-            }
+      if (width > height) {
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
         }
+      } else {
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+      }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
-        callback(dataUrl);
-        URL.revokeObjectURL(url);
+      callback(dataUrl);
+      URL.revokeObjectURL(url);
     };
 
     img.onerror = () => {
-        URL.revokeObjectURL(url);
-        console.error("Failed to load image for resizing");
+      URL.revokeObjectURL(url);
+      console.error("Failed to load image for resizing");
     };
   }
 
@@ -119,54 +127,51 @@
     diepStyle.storageInit = storageInit;
 
     (function initFontHook() {
-        const domStyle = document.createElement('style');
-        domStyle.id = "diep-font-style-hook";
-        document.head.appendChild(domStyle);
+      const domStyle = document.createElement('style');
+      domStyle.id = "diep-font-style-hook";
+      document.head.appendChild(domStyle);
 
-        function updateDOMFont(fontName) {
-            if (!fontName) return;
-            domStyle.innerHTML = `
-                body, * { font-family: '${fontName}', Ubuntu, sans-serif !important; }
-            `;
+      function updateDOMFont(fontName) {
+        if (!fontName) return;
+        domStyle.innerHTML = `body, * { font-family: '${fontName}', Ubuntu, sans-serif !important; }`;
+      }
+
+      if (nowSetting && nowSetting.font) updateDOMFont(nowSetting.font);
+      const originalFn = diepStyle.command.fn;
+      diepStyle.command.fn = function(cmd, value) {
+        originalFn(cmd, value);
+        if (cmd === 'custom_font') {
+          updateDOMFont(value);
         }
+      };
 
-        if (nowSetting && nowSetting.font) updateDOMFont(nowSetting.font);
-        const originalFn = diepStyle.command.fn;
-        diepStyle.command.fn = function(cmd, value) {
-             originalFn(cmd, value);
-             if(cmd === 'custom_font') {
-                 updateDOMFont(value);
-             }
-        };
+      try {
+        const fontDesc = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "font");
+        if (!fontDesc) return;
 
-        try {
-            const fontDesc = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "font");
-            if (!fontDesc) return;
+        const originalSetter = fontDesc.set;
+        const originalGetter = fontDesc.get;
 
-            const originalSetter = fontDesc.set;
-            const originalGetter = fontDesc.get;
-
-            Object.defineProperty(CanvasRenderingContext2D.prototype, "font", {
-                set(value) {
-                    if (nowSetting && nowSetting.font) {
-                        value = value.replace(/Ubuntu|sans-serif/gi, nowSetting.font);
-                    }
-                    originalSetter.call(this, value);
-                },
-                get() {
-                    return originalGetter.call(this);
-                },
-                configurable: true
-            });
-        } catch (e) {
-            console.error("Better Style: Font hook failed", e);
-        }
+        Object.defineProperty(CanvasRenderingContext2D.prototype, "font", {
+          set(value) {
+            if (nowSetting && nowSetting.font) {
+              value = value.replace(/Ubuntu|sans-serif/gi, nowSetting.font);
+            }
+            originalSetter.call(this, value);
+          },
+          get() {
+            return originalGetter.call(this);
+          },
+          configurable: true
+        });
+      } catch (e) {
+        console.error("Better Style: Font hook failed", e);
+      }
     })();
 
     function storageInit(cmd) {
-      var th = 50,
-        netTH = 110;
-      var colors = [
+      let th = 50, netTH = 110;
+      const colors = [
         { id: 2, name: "You FFA", color: "00b1de" },
         { id: 15, name: "Other FFA", color: "f14e54" },
         { id: 3, name: "Blue Team", color: "00b1de" },
@@ -185,7 +190,6 @@
         { id: 14, name: "Maze Wall", color: "bbbbbb" },
         { id: 1, name: "Turret", color: "999999" },
         { id: 0, name: "Smasher", color: "4f4f4f" },
-        
         { id: th++, name: "All Bars", color: "000000", cmd: "ren_bar_background_color" },
         { id: th++, name: "Outline", color: "555555", cmd: "ren_stroke_solid_color" },
         { id: 13, name: "Leader Board", color: "64ff8c" },
@@ -198,7 +202,6 @@
         { id: th++, name: "Minimap 2", color: "797979", cmd: "ren_minimap_border_color" },
         { id: th++, name: "Background 1", color: "CDCDCD", cmd: "ren_background_color" },
         { id: th++, name: "Background 2", color: "797979", cmd: "ren_border_color" },
-        
         { id: netTH++, name: "UI Color1", color: "e69f6c", cmd: "ui_replace_colors" },
         { id: netTH++, name: "UI Color2", color: "ff73ff", cmd: "ui_replace_colors" },
         { id: netTH++, name: "UI Color3", color: "c980ff", cmd: "ui_replace_colors" },
@@ -208,37 +211,35 @@
         { id: netTH++, name: "UI Color7", color: "88ff41", cmd: "ui_replace_colors" },
         { id: netTH++, name: "UI Color8", color: "41ffff", cmd: "ui_replace_colors" },
       ];
+
       diepStyle.colorMap = new Map(
         colors.map(function (elem) {
           return [
             elem.id,
-            {
-              color: elem.color,
-              cmd: elem.cmd || "no cmd",
-            },
+            { color: elem.color, cmd: elem.cmd || "no cmd" },
           ];
         })
       );
+
       diepStyle.uiColorMap = function (cmd) {
-        var uiTH = nowSetting.colors.findIndex(
-          (elem) => elem.name == "UI Color1"
-        );
-        var colorBunch = "";
-        var arr = [];
+        const uiTH = nowSetting.colors.findIndex((elem) => elem.name == "UI Color1");
+        let colorBunch = "";
+        const arr = [];
         if (cmd == "0x") {
-          for (var i = 0; i < 8; i++) {
+          for (let i = 0; i < 8; i++) {
             colorBunch = " 0x" + nowSetting.colors[uiTH + i].color + colorBunch;
           }
           return colorBunch;
         }
         if (cmd == "array") {
-          for (var i = 0; i < 8; i++) {
+          for (let i = 0; i < 8; i++) {
             arr.push(nowSetting.colors[uiTH + i].color);
           }
           return arr;
         }
       };
-      var renders = [
+
+      const renders = [
         { name: "Grid Alpha", value: 0.1, cmd: "grid_base_alpha" },
         { name: "Outline Intensity", value: 0.25, cmd: "stroke_soft_color_intensity" },
         { name: "Show Outline", value: false, cmd: "stroke_soft_color", reverse: true },
@@ -251,8 +252,9 @@
         { name: "Hide Name", value: false, cmd: "names", reverse: true },
         { name: "Font Face", value: "Ubuntu", cmd: "custom_font", type: "select" }
       ];
+
       (function checkHasStorage() {
-        var _localStorage = localStorage.getObject(STORAGE_KEY);
+        const _localStorage = localStorage.getObject(CONFIG.KEYS.STORAGE);
 
         if (_localStorage && _localStorage.nowSetting) {
           nowSetting = _localStorage.nowSetting;
@@ -262,26 +264,20 @@
           nowSetting = getBlankSetting();
         }
 
-        var plain = getBlankSetting();
-        plain.renders.forEach((elem, th) => {
-          var index = nowSetting.renders.findIndex(
-            (now) => elem.cmd == now.cmd
-          );
-          if (index < 0) {
-            nowSetting.renders.splice(th, 0, elem);
+        const plain = getBlankSetting();
+        plain.renders.forEach((elem) => {
+          if (!nowSetting.renders.find((now) => elem.cmd === now.cmd)) {
+            nowSetting.renders.push(elem);
           }
         });
-        plain.colors.forEach((elem, th) => {
-          var index = nowSetting.colors.findIndex((now) => {
-            if (elem.cmd && elem.cmd == now.cmd) return true;
-            if ((elem.id || elem.id == 0) && elem.id == now.id) return true;
-          });
-          if (index < 0) {
-            nowSetting.colors.splice(th, 0, elem);
+        plain.colors.forEach((elem) => {
+          if (!nowSetting.colors.find((now) => (elem.cmd && elem.cmd === now.cmd) || (elem.id !== undefined && elem.id === now.id))) {
+            nowSetting.colors.push(elem);
           }
         });
-        if(!nowSetting.font) nowSetting.font = "Ubuntu";
+        if (!nowSetting.font) nowSetting.font = "Ubuntu";
       })();
+
       (function command() {
         diepStyle.command = {};
         renders.forEach((elem) => {
@@ -294,8 +290,8 @@
             return elem;
           });
           if (cmd === "custom_font") {
-              nowSetting.font = value;
-              return;
+            nowSetting.font = value;
+            return;
           }
           if (diepStyle.command[cmd].reverse) value = !value;
           if (window.input) {
@@ -318,17 +314,16 @@
       diepStyle.getBlankSetting = getBlankSetting;
 
       Storage.prototype.pluginSave = function () {
-        var _storageObj = {
+        const _storageObj = {
           nowSetting: clone(nowSetting),
         };
-        localStorage.setObject(STORAGE_KEY, _storageObj);
+        localStorage.setObject(CONFIG.KEYS.STORAGE, _storageObj);
       };
       localStorage.pluginSave();
     }
 
     function keyListen() {
-      var panelOn = false;
-      var lastEscTime = 0;
+      let lastEscTime = 0;
 
       const performToggle = () => {
         panelOn = !panelOn;
@@ -339,17 +334,17 @@
       };
 
       document.addEventListener("keyup", function (evt) {
-        var e = window.event || evt;
-        var key = e.which || e.keyCode;
+        const e = window.event || evt;
+        const key = e.which || e.keyCode;
         
         if (key === 27) {
-            const now = Date.now();
-            if (now - lastEscTime < 500) {
-                performToggle();
-                lastEscTime = 0; 
-            } else {
-                lastEscTime = now;
-            }
+          const now = Date.now();
+          if (now - lastEscTime < 500) {
+            performToggle();
+            lastEscTime = 0; 
+          } else {
+            lastEscTime = now;
+          }
         }
       });
 
@@ -388,9 +383,12 @@
 
       function init1() {
         diepStyle.resetRender = resetRender;
-        var title = `
+        const title = `
             <div class="header-container">
-                <div class="title">Better Style <small>v4.4</small></div>
+                <div class="title">
+                    <img src="${CONFIG.BRAND_ICON}" alt="logo" style="height: 24px; vertical-align: middle; margin-right: 8px;">
+                    Better Style <small>v4.4</small>
+                </div>
                 <div class="toggle-container">
                    <label class="switch">
                       <input type="checkbox" id="darkModeToggle">
@@ -401,8 +399,7 @@
             </div>
             <div class="subtitle">Press Esc twice to toggle</div>`;
             
-        // FIXED: Added zIndex: 10000 so the color picker renders above the main panel (9999)
-        var colorPlane = function (id) {
+        const colorPlane = function (id) {
           return `{position:'left',width:300, height:200,zIndex:10000,onFineChange:'diepStyle.onColor(${id},this)'}`;
         };
 
@@ -414,6 +411,7 @@
                 btn.disabled = !diepStyle.currentThemeId || !theme || isReadOnly;
            }
         }
+
         function getCombinedThemes() {
              const defaultObj = {
                  id: "default_theme_readonly",
@@ -466,7 +464,7 @@
           document.querySelectorAll("#styleSetting .render").forEach(function (elem) {
               elem.outerHTML = ``;
           });
-          var it = document.querySelector(".renderBegin");
+          const it = document.querySelector(".renderBegin");
           if(!it) return;
 
           it.insertAdjacentHTML("afterend", getRenderBody());
@@ -490,14 +488,14 @@
           updateOverwriteBtn();
         }
 
-        var bodyTheme = getThemeBody();
-        var bodyRender = getRenderBody();
-        var bodyColor = getColorBody();
+        const bodyTheme = getThemeBody();
+        const bodyRender = getRenderBody();
+        const bodyColor = getColorBody();
 
         function getThemeBody() {
           const allThemes = getCombinedThemes();
           const isDark = nowSetting.uiMode === 'dark';
-          const iconSrc = isDark ? ICON_SAVE_DARK : ICON_SAVE_LIGHT;
+          const iconSrc = isDark ? CONFIG.ICONS.SAVE_DARK : CONFIG.ICONS.SAVE_LIGHT;
 
           let themeListHTML = allThemes.map((t) => {
             const isSelected = diepStyle.currentThemeId === t.id;
@@ -516,7 +514,7 @@
                 </div>`;
           }).join('');
 
-          var html = `
+          const html = `
                 <div class="themeBody">
                     <div class="section-title">Local Themes</div>
                     <div class="theme-controls">
@@ -531,14 +529,14 @@
             `;
           return html;
         }
+
         function getRenderBody() {
-          var renders = nowSetting.renders;
-          var html = ``;
+          const renders = nowSetting.renders;
+          let html = ``;
 
           renders.forEach((r) => {
               if (r.type === 'select' && r.cmd === 'custom_font') {
-                  const fonts = ["Ubuntu", "Protest Riot", "Roboto", "Open Sans", "Montserrat", "Oswald"];
-                  let options = fonts.map(f => `<option value="${f}" ${r.value === f ? 'selected' : ''}>${f}</option>`).join('');
+                  let options = CONFIG.FONTS.LIST.map(f => `<option value="${f}" ${r.value === f ? 'selected' : ''}>${f}</option>`).join('');
                   html += `<div class="row render">
                     <div class="cell label">Font Face</div>
                     <div class="cell input-area">
@@ -574,9 +572,9 @@
         }
 
         function getColorBody() {
-          var it = `<div class="section-title">Colors</div><div class="color-grid">`;
+          let it = `<div class="section-title">Colors</div><div class="color-grid">`;
           nowSetting.colors.forEach(function (elem, th) {
-            var id = elem.id;
+            const id = elem.id;
             it += `
                 <div class="color-item colorBlock${th}">
                     <div class="color-label">${elem.name}</div>
@@ -589,10 +587,10 @@
         }
         
         const isDark = nowSetting.uiMode === 'dark';
-        const importIcon = isDark ? ICON_IMPORT_DARK : ICON_IMPORT_LIGHT;
-        const exportIcon = isDark ? ICON_EXPORT_DARK : ICON_EXPORT_LIGHT;
+        const importIcon = isDark ? CONFIG.ICONS.IMPORT_DARK : CONFIG.ICONS.IMPORT_LIGHT;
+        const exportIcon = isDark ? CONFIG.ICONS.EXPORT_DARK : CONFIG.ICONS.EXPORT_LIGHT;
 
-        var allBody = `
+        const allBody = `
             <div class="pluginBody">
                 ${title}
                 <hr>
@@ -605,18 +603,18 @@
                 <br>
             </div>
             `;
-        var footer = `
-    <div class="footer">
-        <div class="action-btns">
-            <button class="import action-btn"><img class="btn-icon icon-import" src="${importIcon}" alt="">Import JSON</button>
-            <button class="export action-btn"><img class="btn-icon icon-export" src="${exportIcon}" alt="">Export JSON</button>
-            <button class="marketplace-btn action-btn" style="background:#768dfc; color:white; border:none;">Marketplace</button>
-            <button class="lock-btn action-btn">Lock</button>
-            <button class="reset-btn action-btn" style="background:#ff7979; color:white; border:none;">Reset</button>
-        </div>
-    </div>
-`;
-        var modalHTML = `
+        const footer = `
+            <div class="footer">
+                <div class="action-btns">
+                    <button class="import action-btn"><img class="btn-icon icon-import" src="${importIcon}" alt="">Import JSON</button>
+                    <button class="export action-btn"><img class="btn-icon icon-export" src="${exportIcon}" alt="">Export JSON</button>
+                    <button class="marketplace-btn action-btn" style="background:#768dfc; color:white; border:none;">Marketplace</button>
+                    <button class="lock-btn action-btn">Lock</button>
+                    <button class="reset-btn action-btn" style="background:#ff7979; color:white; border:none;">Reset</button>
+                </div>
+            </div>
+        `;
+        const modalHTML = `
             <div id="ds-modal" class="ds-modal hide">
                 <div class="ds-modal-content">
                     <span class="ds-close">&times;</span>
@@ -631,7 +629,7 @@
             </div>
         `;
 
-        var msgModalHTML = `
+        const msgModalHTML = `
             <div id="ds-msg-modal" class="ds-modal hide">
                 <div class="ds-modal-content" style="max-width: 400px; text-align:center;">
                     <h3 id="ds-msg-title">Alert</h3>
@@ -644,68 +642,64 @@
             </div>
         `;
 
-        var marketModalHTML = `
-    <div id="ds-market-modal" class="ds-modal hide">
-        <div class="ds-modal-content" style="max-width: 700px; height: 600px; display:flex; flex-direction:column;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                 <h3 style="margin-top:0;">Theme Marketplace</h3>
-                 <span class="ds-close-market" style="font-size:28px; cursor:pointer;">&times;</span>
+        const marketModalHTML = `
+            <div id="ds-market-modal" class="ds-modal hide">
+                <div class="ds-modal-content" style="max-width: 700px; height: 600px; display:flex; flex-direction:column;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                         <h3 style="margin-top:0;">Theme Marketplace</h3>
+                         <span class="ds-close-market" style="font-size:28px; cursor:pointer;">&times;</span>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <button id="refreshMarketBtn" class="action-btn">Refresh List</button>
+                        <button id="openPublishModalBtn" class="action-btn" style="background:#00e16e; color:white; border:none;">Publish Theme</button>
+                    </div>
+                    <div id="market-list" style="flex:1; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px; padding:10px; background: rgba(0,0,0,0.05);">
+                         Loading...
+                    </div>
+                </div>
             </div>
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <button id="refreshMarketBtn" class="action-btn">Refresh List</button>
-                <button id="openPublishModalBtn" class="action-btn" style="background:#00e16e; color:white; border:none;">Publish Theme</button>
+        `;
+        const publishModalHTML = `
+            <div id="ds-publish-modal" class="ds-modal hide">
+                <div class="ds-modal-content">
+                    <span class="ds-close-publish">&times;</span>
+                    <h3>Publish Theme</h3>
+                    <div class="form-group">
+                        <label>Author Name:</label>
+                        <input type="text" id="publishAuthor" placeholder="Anonymous">
+                    </div>
+                    <div class="form-group">
+                        <label>Theme Name:</label>
+                        <input type="text" id="publishName" placeholder="My Cool Theme">
+                    </div>
+                    <div class="form-group">
+                         <label>Preview Image (Canvas Optimized):</label>
+                         <input type="file" id="publishImageInput" accept="image/png, image/jpeg">
+                         <div id="imagePreviewContainer" style="margin-top:5px; border:1px solid #ccc; min-height:50px; display:flex; align-items:center; justify-content:center; background:#eee;">
+                             <span style="color:#888;">No image selected</span>
+                             <img id="imagePreviewImg" style="max-width:100%; max-height:150px; display:none;">
+                         </div>
+                    </div>
+                    <div class="ds-modal-footer" style="margin-top:15px;">
+                         <button id="confirmPublishBtn" style="background:#00e16e;">Publish Now</button>
+                    </div>
+                </div>
             </div>
-            <div id="market-list" style="flex:1; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px; padding:10px; background: rgba(0,0,0,0.05);">
-                 Loading...
-            </div>
-        </div>
-    </div>
-`;
-        var publishModalHTML = `
-    <div id="ds-publish-modal" class="ds-modal hide">
-        <div class="ds-modal-content">
-            <span class="ds-close-publish">&times;</span>
-            <h3>Publish Theme</h3>
-            <div class="form-group">
-                <label>Author Name:</label>
-                <input type="text" id="publishAuthor" placeholder="Anonymous">
-            </div>
-            <div class="form-group">
-                <label>Theme Name:</label>
-                <input type="text" id="publishName" placeholder="My Cool Theme">
-            </div>
-            <div class="form-group">
-                 <label>Preview Image (Canvas Optimized):</label>
-                 <input type="file" id="publishImageInput" accept="image/png, image/jpeg">
-                 <div id="imagePreviewContainer" style="margin-top:5px; border:1px solid #ccc; min-height:50px; display:flex; align-items:center; justify-content:center; background:#eee;">
-                     <span style="color:#888;">No image selected</span>
-                     <img id="imagePreviewImg" style="max-width:100%; max-height:150px; display:none;">
-                 </div>
-            </div>
-            <div class="ds-modal-footer" style="margin-top:15px;">
-                 <button id="confirmPublishBtn" style="background:#00e16e;">Publish Now</button>
-            </div>
-        </div>
-    </div>
-`;
+        `;
 
-        var temp = `<div id="styleSetting">
-${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} ${msgModalHTML}`;
+        const temp = `<div id="styleSetting">${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} ${msgModalHTML}`;
         document.body.insertAdjacentHTML("beforeend", temp);
-        addScript(jsColorPackage);
+        addScript(CONFIG.JS_COLOR_URL);
 
         staticListenerInit();
+        togglePanel(false);
 
         function updateIcons(isDark) {
-            document.querySelectorAll('.icon-save').forEach(img => img.src = isDark ? ICON_SAVE_DARK : ICON_SAVE_LIGHT);
-            document.querySelectorAll('.icon-import').forEach(img => img.src = isDark ? ICON_IMPORT_DARK : ICON_IMPORT_LIGHT);
-            document.querySelectorAll('.icon-export').forEach(img => img.src = isDark ? ICON_EXPORT_DARK : ICON_EXPORT_LIGHT);
-            document.querySelectorAll('.icon-market').forEach(img => img.src = isDark ? ICON_MARKET_DARK : ICON_MARKET_LIGHT);
+            document.querySelectorAll('.icon-save').forEach(img => img.src = isDark ? CONFIG.ICONS.SAVE_DARK : CONFIG.ICONS.SAVE_LIGHT);
+            document.querySelectorAll('.icon-import').forEach(img => img.src = isDark ? CONFIG.ICONS.IMPORT_DARK : CONFIG.ICONS.IMPORT_LIGHT);
+            document.querySelectorAll('.icon-export').forEach(img => img.src = isDark ? CONFIG.ICONS.EXPORT_DARK : CONFIG.ICONS.EXPORT_LIGHT);
+            document.querySelectorAll('.icon-market').forEach(img => img.src = isDark ? CONFIG.ICONS.MARKET_DARK : CONFIG.ICONS.MARKET_LIGHT);
         }
-
-        // ==========================================
-        // MALICIOUS CODE COMPLETELY REMOVED HERE
-        // ==========================================
 
         function staticListenerInit() {
           document.getElementById('darkModeToggle').addEventListener('change', function (e) {
@@ -759,8 +753,8 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
           });
 
           document.getElementById('confirmPublishBtn').addEventListener('click', function () {
-            var author = document.getElementById('publishAuthor').value || "Anonymous";
-            var themeName = document.getElementById('publishName').value;
+            const author = document.getElementById('publishAuthor').value || "Anonymous";
+            const themeName = document.getElementById('publishName').value;
             if (!themeName) { customAlert("Please enter a theme name."); return; }
 
             publishTheme(themeName, author, currentBase64Image);
@@ -788,7 +782,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                 modal.classList.add("hide");
 
                 diepStyle.currentThemeId = null;
-                localStorage.removeItem(SELECTED_THEME_KEY);
+                localStorage.removeItem(CONFIG.KEYS.SELECTED_THEME);
 
                 refreshThemeListUI();
             };
@@ -820,7 +814,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               diepStyle.resetColor();
               diepStyle.resetRender("reset");
               diepStyle.currentThemeId = "default_theme_readonly";
-              localStorage.setItem(SELECTED_THEME_KEY, diepStyle.currentThemeId);
+              localStorage.setItem(CONFIG.KEYS.SELECTED_THEME, diepStyle.currentThemeId);
               refreshThemeListUI();
               e.target.innerHTML = "Reset";
             }
@@ -830,13 +824,14 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
 
           loadMarketplace();
         }
+
         function bindThemeActions() {
           const saveBtn = document.getElementById('saveThemeBtn');
           if(saveBtn) {
               saveBtn.onclick = function () {
-                var name = document.getElementById('newThemeName').value;
+                const name = document.getElementById('newThemeName').value;
                 if (!name) { customAlert("Please enter a name for the new theme."); return; }
-                var jsonObj = diepStyle.exportJSON("object");
+                const jsonObj = diepStyle.exportJSON("object");
                 saveLocalTheme(name, jsonObj);
               };
           }
@@ -851,7 +846,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                 const currentTheme = customThemes.find(t => t.id === diepStyle.currentThemeId);
                 if (currentTheme) {
                      customConfirm(`Overwrite theme "${currentTheme.name}" with current settings?`, function() {
-                          var jsonObj = diepStyle.exportJSON("object");
+                          const jsonObj = diepStyle.exportJSON("object");
                           saveLocalTheme(currentTheme.name, jsonObj, diepStyle.currentThemeId);
                      });
                 }
@@ -861,27 +856,27 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
           if(themeList) {
               themeList.onclick = function (e) {
                 if (e.target.classList.contains('load-theme-btn')) {
-                  var id = e.target.getAttribute('data-id');
-                  var theme = getCombinedThemes().find(t => t.id == id);
+                  const id = e.target.getAttribute('data-id');
+                  const theme = getCombinedThemes().find(t => t.id == id);
                   if (theme) {
                     diepStyle.importJSON(theme.data);
                     diepStyle.currentThemeId = id;
-                    localStorage.setItem(SELECTED_THEME_KEY, id);
+                    localStorage.setItem(CONFIG.KEYS.SELECTED_THEME, id);
                     refreshThemeListUI();
                   }
                 }
                 if (e.target.classList.contains('delete-theme-btn')) {
-                  var id = e.target.getAttribute('data-id');
+                  const id = e.target.getAttribute('data-id');
                   if (id === "default_theme_readonly") return;
 
-                  var idx = customThemes.findIndex(t => t.id == id);
+                  const idx = customThemes.findIndex(t => t.id == id);
                   if (idx !== -1) {
                       customConfirm("Are you sure you want to delete this theme?", function() {
                             customThemes.splice(idx, 1);
-                            localStorage.setObject(THEME_KEY, customThemes);
+                            localStorage.setObject(CONFIG.KEYS.THEME, customThemes);
                             if (diepStyle.currentThemeId == id) {
                               diepStyle.currentThemeId = null;
-                              localStorage.removeItem(SELECTED_THEME_KEY);
+                              localStorage.removeItem(CONFIG.KEYS.SELECTED_THEME);
                             }
                             refreshThemeListUI();
                       });
@@ -895,10 +890,10 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
           const list = document.getElementById('market-list');
           list.innerHTML = "Loading Themes from Marketplace...";
 
-          fetch(`${MARKET_ENDPOINT}/get/${MARKET_KEY}`, {
+          fetch(`${CONFIG.MARKET_API.ENDPOINT}/get/${CONFIG.KEYS.MARKET}`, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${MARKET_TOKEN}`
+              'Authorization': `Bearer ${CONFIG.MARKET_API.TOKEN}`
             }
           })
             .then(response => response.json())
@@ -923,7 +918,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
 
               list.innerHTML = "";
               themes.slice().reverse().forEach((t, index) => {
-                let card = document.createElement('div');
+                const card = document.createElement('div');
                 card.className = "theme-card market-card";
                 card.style.padding = "10px";
                 card.style.marginBottom = "8px";
@@ -936,7 +931,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
                 }
                 
                 const isDark = nowSetting.uiMode === 'dark';
-                const iconSrc = isDark ? ICON_SAVE_DARK : ICON_SAVE_LIGHT;
+                const iconSrc = isDark ? CONFIG.ICONS.SAVE_DARK : CONFIG.ICONS.SAVE_LIGHT;
 
                 card.innerHTML = `
                           <div style="display:flex; flex:1; align-items:center;">
@@ -976,9 +971,9 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
           btn.style.opacity = "0.5";
           btn.style.cursor = "not-allowed";
 
-          fetch(`${MARKET_ENDPOINT}/get/${MARKET_KEY}`, {
+          fetch(`${CONFIG.MARKET_API.ENDPOINT}/get/${CONFIG.KEYS.MARKET}`, {
             method: 'GET',
-            headers: { 'Authorization': `Bearer ${MARKET_TOKEN}` }
+            headers: { 'Authorization': `Bearer ${CONFIG.MARKET_API.TOKEN}` }
           })
             .then(res => res.json())
             .then(data => {
@@ -988,7 +983,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               }
 
               if (!Array.isArray(currentThemes)) currentThemes = [];
-              let newTheme = {
+              const newTheme = {
                 name: name,
                 author: author,
                 date: new Date().toISOString(),
@@ -997,12 +992,12 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               };
               currentThemes.push(newTheme);
 
-              return fetch(`${MARKET_ENDPOINT}`, {
+              return fetch(`${CONFIG.MARKET_API.ENDPOINT}`, {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${MARKET_TOKEN}`
+                  'Authorization': `Bearer ${CONFIG.MARKET_API.TOKEN}`
                 },
-                body: JSON.stringify(["SET", MARKET_KEY, JSON.stringify(currentThemes)])
+                body: JSON.stringify(["SET", CONFIG.KEYS.MARKET, JSON.stringify(currentThemes)])
               });
             })
             .then(res => res.json())
@@ -1023,13 +1018,15 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               btn.style.cursor = "pointer";
             });
         }
+
         function refreshThemeListUI() {
-          var list = document.querySelector('.themeBody');
+          const list = document.querySelector('.themeBody');
           if(!list) return;
           list.outerHTML = getThemeBody();
           bindThemeActions();
           updateOverwriteBtn();
         }
+
         function saveLocalTheme(name, themeDataObj, existingId = null) {
           let targetId = existingId;
 
@@ -1047,17 +1044,17 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               data: themeDataObj
             });
           }
-          localStorage.setObject(THEME_KEY, customThemes);
+          localStorage.setObject(CONFIG.KEYS.THEME, customThemes);
 
           diepStyle.currentThemeId = targetId;
-          localStorage.setItem(SELECTED_THEME_KEY, targetId);
+          localStorage.setItem(CONFIG.KEYS.SELECTED_THEME, targetId);
 
           refreshThemeListUI();
         }
 
         function updateLockState() {
-          var lockBtn = document.querySelector(".lock-btn");
-          var resetBtn = document.querySelector(".reset-btn");
+          const lockBtn = document.querySelector(".lock-btn");
+          const resetBtn = document.querySelector(".reset-btn");
           if (nowSetting.lock) {
             document.querySelector(".pluginBody").classList.add("locked-ui");
             lockBtn.innerHTML = "Locked";
@@ -1083,7 +1080,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
               };
               updateFill(el);
               el.addEventListener("input", function (e) {
-                var value = calc(e.target.value);
+                const value = calc(e.target.value);
                 document.querySelector(selector).innerHTML = value;
                 updateFill(e.target);
                 diepStyle.command.fn(name, value);
@@ -1095,8 +1092,6 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             bindSlider("border_color_alpha", ".border_color_alpha_value", v => (v - (v % 2)) / 100);
             bindSlider("ui_scale", ".ui_scale_value", v => (v - (v % 2)) / 100);
 
-            // FIXED: Dynamically bind all boolean renders instead of a hardcoded array.
-            // This ensures "Show Ping" (latency) and others work properly.
             nowSetting.renders.forEach(r => {
                 if (r.type !== 'select' && !r.cmd.includes('alpha') && !r.cmd.includes('intensity') && !r.cmd.includes('scale')) {
                     const el = document.querySelector(`input[name="${r.cmd}"]`);
@@ -1115,7 +1110,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
 
       function loadColor() {
         nowSetting.colors.some(function (elem, th) {
-          var target = document.querySelector(`.colorBlock${th}`);
+          const target = document.querySelector(`.colorBlock${th}`);
           if (!target || !target.querySelector("input").jscolor) {
             setTimeout(loadColor, 500);
             return true;
@@ -1126,8 +1121,8 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
       }
 
       function exportJSON(mode = "string", sourceSettings = null) {
-        var settingToUse = sourceSettings || nowSetting;
-        var array = [];
+        const settingToUse = sourceSettings || nowSetting;
+        const array = [];
         settingToUse.colors.forEach(function (elem) {
           if (elem.id && elem.id < 50)
             array.push({ id: elem.id, value: elem.color, });
@@ -1136,9 +1131,9 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
         });
 
         if(sourceSettings) {
-             var uiTH = settingToUse.colors.findIndex(elem => elem.name == "UI Color1");
-             var arr = [];
-             for (var i = 0; i < 8; i++) {
+             const uiTH = settingToUse.colors.findIndex(elem => elem.name == "UI Color1");
+             const arr = [];
+             for (let i = 0; i < 8; i++) {
                  arr.push(settingToUse.colors[uiTH + i].color);
              }
              array.push({
@@ -1166,7 +1161,7 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
 
       function importJSON(jsonObj) {
         if (!jsonObj) { customAlert("Invalid data."); return; }
-        var gotArr = jsonObj;
+        let gotArr = jsonObj;
         if (typeof gotArr === 'string') {
           try {
             gotArr = JSON.parse(gotArr);
@@ -1185,16 +1180,16 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             return now;
           });
           if (elem.cmd == "ui_replace_colors") {
-            var uiTH = nowSetting.colors.findIndex(
+            const uiTH = nowSetting.colors.findIndex(
               (elem) => elem.name == "UI Color1"
             );
-            for (var i = 0; i < 8; i++) {
+            for (let i = 0; i < 8; i++) {
               nowSetting.colors[uiTH + i].color = elem.value[i];
             }
           }
           if (elem.cmd === "custom_font") {
               nowSetting.font = elem.value;
-              var rInd = nowSetting.renders.findIndex(r => r.cmd === 'custom_font');
+              const rInd = nowSetting.renders.findIndex(r => r.cmd === 'custom_font');
               if(rInd >= 0) nowSetting.renders[rInd].value = elem.value;
           }
         });
@@ -1205,13 +1200,13 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
     }
 
     function onColor(id, e) {
-      var target = id;
-      var color = e.toString();
+      const target = id;
+      const color = e.toString();
       if (window.input) {
         if (id >= 0 && id < 50) {
           input.execute(`net_replace_color ${target} 0x${color}`);
         } else if (id >= 50 && id < 100) {
-          var cmd = diepStyle.colorMap.get(id).cmd;
+          const cmd = diepStyle.colorMap.get(id).cmd;
           input.set_convar(cmd, `0x${color}`);
         } else {
           input.execute("ui_replace_colors" + diepStyle.uiColorMap("0x"));
@@ -1253,128 +1248,66 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
             height: 85vh;
             display: flex; flex-direction: column; font-family: 'Ubuntu', sans-serif; font-size: 12px; z-index: 9999;
         }
-        .header-container { display: flex; justify-content: space-between; align-items: center;
-        }
-        .title { font-weight: bold; font-size: 1.3rem;
-        }
-        .subtitle { font-size: 0.8rem; color: #777; margin-bottom: 10px;
-        }
-        .pluginBody { flex-grow: 1; overflow-y: auto; padding-right: 5px;
-        }
-        .pluginBody.locked-ui { opacity: 0.6; pointer-events: none;
-        }
-        .row { display: flex; align-items: center; margin-bottom: 5px; padding: 2px 0;
-        }
-        .cell { flex: 1; } .label { flex: 2; font-weight: 500;
-        }
-        .value-display { text-align: right; padding-right: 10px; font-family: monospace;
-        }
-        .input-area { flex: 2; display: flex; align-items: center;
-        }
-        .check-area { justify-content: flex-end;
-        }
+        .header-container { display: flex; justify-content: space-between; align-items: center; }
+        .title { font-weight: bold; font-size: 1.3rem; display: flex; align-items: center;}
+        .subtitle { font-size: 0.8rem; color: #777; margin-bottom: 10px; }
+        .pluginBody { flex-grow: 1; overflow-y: auto; padding-right: 5px; }
+        .pluginBody.locked-ui { opacity: 0.6; pointer-events: none; }
+        .row { display: flex; align-items: center; margin-bottom: 5px; padding: 2px 0; }
+        .cell { flex: 1; } .label { flex: 2; font-weight: 500; }
+        .value-display { text-align: right; padding-right: 10px; font-family: monospace; }
+        .input-area { flex: 2; display: flex; align-items: center; }
+        .check-area { justify-content: flex-end; }
         .font-select { width: 100%; padding: 4px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--btn-bg); color: var(--text-color); }
-        input[type=range] { -webkit-appearance: none; width: 100%; height: 12px; border-radius: 6px; background: var(--range-track);
-        outline: none; background-image: linear-gradient(var(--accent-color), var(--accent-color)); background-repeat: no-repeat; background-size: 0% 100%; cursor: pointer;
-        }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #ffffff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.4); cursor: pointer; margin-top: -3px; transition: transform 0.1s;
-        }
-        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1);
-        }
-        hr { border: 0; border-top: 1px solid var(--border-color); margin: 10px 0;
-        }
-        .section-title { font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-size: 0.85rem; color: var(--accent-color);
-        }
-        .color-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-        }
-        .color-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color);
-        padding: 4px; border-radius: 4px; background: rgba(0,0,0,0.05); }
-        input.jscolor { width: 60px; border: none;
-        text-align: center; border-radius: 3px; cursor: pointer; }
-        .theme-controls { display: flex;
-        gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
-        #newThemeName { flex: 2; padding: 5px;
-        border: 1px solid var(--border-color); border-radius: 4px; background: var(--modal-bg); color: var(--text-color); min-width: 120px;
-        }
-        #saveThemeBtn, #overwriteThemeBtn { flex: 1; padding: 5px; cursor: pointer; background: var(--accent-color);
-        color: white; border: none; border-radius: 4px; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px; }
-        #overwriteThemeBtn { background: #f39c12;
-        }
-        #overwriteThemeBtn:disabled { background: var(--btn-bg); color: #999; cursor: not-allowed;
-        }
-        .theme-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px;
-        padding: 5px; }
-        .theme-card { display: flex; justify-content: space-between; align-items: center; padding: 6px;
-        border-bottom: 1px solid var(--border-color); transition: all 0.2s; }
+        input[type=range] { -webkit-appearance: none; width: 100%; height: 12px; border-radius: 6px; background: var(--range-track); outline: none; background-image: linear-gradient(var(--accent-color), var(--accent-color)); background-repeat: no-repeat; background-size: 0% 100%; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.4); cursor: pointer; margin-top: -3px; transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+        hr { border: 0; border-top: 1px solid var(--border-color); margin: 10px 0; }
+        .section-title { font-weight: bold; margin-bottom: 8px; text-transform: uppercase; font-size: 0.85rem; color: var(--accent-color); }
+        .color-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .color-item { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); padding: 4px; border-radius: 4px; background: rgba(0,0,0,0.05); }
+        input.jscolor { width: 60px; border: none; text-align: center; border-radius: 3px; cursor: pointer; }
+        .theme-controls { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+        #newThemeName { flex: 2; padding: 5px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--modal-bg); color: var(--text-color); min-width: 120px; }
+        #saveThemeBtn, #overwriteThemeBtn { flex: 1; padding: 5px; cursor: pointer; background: var(--accent-color); color: white; border: none; border-radius: 4px; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        #overwriteThemeBtn { background: #f39c12; }
+        #overwriteThemeBtn:disabled { background: var(--btn-bg); color: #999; cursor: not-allowed; }
+        .theme-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; padding: 5px; }
+        .theme-card { display: flex; justify-content: space-between; align-items: center; padding: 6px; border-bottom: 1px solid var(--border-color); transition: all 0.2s; }
         .theme-card.selected-theme { border-left: 4px solid #00e16e; background: rgba(0, 225, 110, 0.1); }
-        .theme-card.market-card:hover { background: rgba(0,0,0,0.05) !important;
-        }
-        .theme-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;
-        }
-        .theme-actions button { font-size: 0.75rem; margin-left: 4px; cursor: pointer; border-radius: 3px;
-        border: 1px solid var(--border-color); padding: 2px 6px; background: var(--btn-bg); color: var(--text-color);}
+        .theme-card.market-card:hover { background: rgba(0,0,0,0.05) !important; }
+        .theme-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px; }
+        .theme-actions button { font-size: 0.75rem; margin-left: 4px; cursor: pointer; border-radius: 3px; border: 1px solid var(--border-color); padding: 2px 6px; background: var(--btn-bg); color: var(--text-color);}
         .load-theme-btn:disabled { opacity: 0.6; cursor: default; }
-        .delete-theme-btn { color: white !important;
-        background: #ff4757 !important; border: none !important; }
-        .delete-theme-btn:hover { background: #e84118 !important;
-        }
+        .delete-theme-btn { color: white !important; background: #ff4757 !important; border: none !important; }
+        .delete-theme-btn:hover { background: #e84118 !important; }
         .delete-theme-btn:disabled { background: #ccc !important; }
-        .footer { margin-top: 10px;
-        padding-top: 10px; border-top: 1px solid var(--border-color); }
-        .action-btns { display: flex; justify-content: space-between;
-        gap: 5px; flex-wrap: wrap; }
-        .action-btn { flex: 1 1 30%; padding: 8px;
-        cursor: pointer; background: var(--btn-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; white-space: nowrap;
-        display: flex; align-items: center; justify-content: center; gap: 4px;
-        }
-        .reset-btn:hover { background: #ff7979 !important;
-        }
+        .footer { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+        .action-btns { display: flex; justify-content: space-between; gap: 5px; flex-wrap: wrap; }
+        .action-btn { flex: 1 1 30%; padding: 8px; cursor: pointer; background: var(--btn-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .reset-btn:hover { background: #ff7979 !important; }
         .btn-icon { width: 14px; height: 14px; object-fit: contain; }
-        .switch { position: relative;
-        display: inline-block; width: 34px; height: 18px; margin-right: 5px; }
-        .switch input { opacity: 0;
-        width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0;
-        left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;
-        }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px;
-        bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent-color);
-        }
-        input:checked + .slider:before { transform: translateX(16px);
-        }
-        .toggle-container { display: flex; align-items: center; font-size: 0.8rem;
-        }
-        .hide { display: none !important;
-        }
-        .ds-modal { position: fixed; z-index: 10000; left: 0; top: 0; width: 100%;
-        height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center;
-        }
-        .ds-modal-content { background-color: var(--modal-bg); color: var(--text-color); margin: auto; padding: 20px;
-        border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-        .ds-close, .ds-close-market, .ds-close-publish { color: #aaa; float: right; font-size: 28px; font-weight: bold;
-        cursor: pointer; line-height: 20px;}
-        .ds-close:hover, .ds-close-publish:hover { color: var(--text-color);
-        }
-        #ds-modal-text { width: 100%; height: 150px; margin: 10px 0; padding: 5px;
-        background: var(--btn-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: monospace; font-size: 0.8rem;
-        }
-        .ds-modal-footer { text-align: right;
-        margin-top: 15px;}
-        .ds-modal-footer button { padding: 8px 16px; background: var(--accent-color); color: white;
-        border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-left: 5px;}
-        .form-group { margin-bottom: 10px;
-        } .form-group label { display: block; margin-bottom: 5px; font-weight: bold; } .form-group input[type=text], .form-group input[type=file] { width: 100%; padding: 8px;
-        border: 1px solid var(--border-color); border-radius: 4px; background: var(--btn-bg); color: var(--text-color); }
+        .switch { position: relative; display: inline-block; width: 34px; height: 18px; margin-right: 5px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent-color); }
+        input:checked + .slider:before { transform: translateX(16px); }
+        .toggle-container { display: flex; align-items: center; font-size: 0.8rem; }
+        .hide { display: none !important; }
+        .ds-modal { position: fixed; z-index: 10000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; }
+        .ds-modal-content { background-color: var(--modal-bg); color: var(--text-color); margin: auto; padding: 20px; border: 1px solid var(--border-color); width: 90%; max-width: 500px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .ds-close, .ds-close-market, .ds-close-publish { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 20px;}
+        .ds-close:hover, .ds-close-publish:hover { color: var(--text-color); }
+        #ds-modal-text { width: 100%; height: 150px; margin: 10px 0; padding: 5px; background: var(--btn-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-family: monospace; font-size: 0.8rem; }
+        .ds-modal-footer { text-align: right; margin-top: 15px;}
+        .ds-modal-footer button { padding: 8px 16px; background: var(--accent-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; margin-left: 5px;}
+        .form-group { margin-bottom: 10px; } .form-group label { display: block; margin-bottom: 5px; font-weight: bold; } .form-group input[type=text], .form-group input[type=file] { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--btn-bg); color: var(--text-color); }
       `);
       function addGlobalStyle(css) {
-        var head, style;
-        head = document.getElementsByTagName("head")[0];
-        if (!head) { return;
-        }
-        style = document.createElement("style");
+        const head = document.getElementsByTagName("head")[0];
+        if (!head) return;
+        const style = document.createElement("style");
         style.type = "text/css";
         style.innerHTML = css;
         head.appendChild(style);
@@ -1383,13 +1316,13 @@ ${allBody} ${footer} </div> ${modalHTML} ${marketModalHTML} ${publishModalHTML} 
   }
 
   function togglePanel(tf) {
-    var el = document.querySelector("#styleSetting");
+    const el = document.querySelector("#styleSetting");
     if (el) el.style.display = tf ? "flex" : "none";
   }
 
   function addScript(src) {
-    var s = document.createElement("script");
+    const s = document.createElement("script");
     s.setAttribute("src", src);
     document.body.appendChild(s);
-  };
+  }
 })();
